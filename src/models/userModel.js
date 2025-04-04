@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Define the User Schema
 const userSchema = new mongoose.Schema({
@@ -47,8 +47,16 @@ userSchema.pre('save', async function (next) {
 
 // Verify Password
 userSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
+    try {
+        return await bcrypt.compare(enteredPassword, this.password);
+    } catch (error) {
+        console.error('Password comparison error:', error);
+        throw new Error('Error comparing passwords');
+    }
 };
+
+// Add Index for Email
+userSchema.index({ email: 1 }); // Speeds up email-based queries
 
 // Export the Model
 module.exports = mongoose.model('User', userSchema);
