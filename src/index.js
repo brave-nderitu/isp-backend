@@ -1,29 +1,46 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const authRoutes = require('./routes/authRoutes');
+const cors = require('cors');
 
-// Initialize Express app
+const authRoutes = require('./routes/authRoutes');
+const customerRoutes = require('./routes/customerRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+
 const app = express();
 
-// Middleware to parse JSON
 app.use(express.json());
+app.use(cors());
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Basic Route
 app.get('/', (req, res) => {
     res.send('ISP Backend Running...');
 });
 
-// Start the server
+app.use(notFound);
+
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`Server running on http://localhost:${PORT}`);
+    } else {
+        console.log(`Server running on port ${PORT}`);
+    }
+});
+
+process.on('SIGINT', async () => {
+    await mongoose.disconnect();
+    console.log('MongoDB disconnected');
+    process.exit(0);
 });
