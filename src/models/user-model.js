@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
             unique: true,
             trim: true,
             lowercase: true,
+            match: [/.+@.+\..+/, 'Please enter a valid email address'], // Enhanced validation
         },
         password: {
             type: String,
@@ -31,30 +32,38 @@ const userSchema = new mongoose.Schema(
         },
     },
     {
-        timestamps: true,
+        timestamps: true, // Automatically manages createdAt and updatedAt
     }
 );
 
+// Hash password before saving
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+    if (!this.isModified('password')) return next(); // Only hash if the password has been modified
     try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
+        const salt = await bcrypt.genSalt(10); // Salt for hashing
+        this.password = await bcrypt.hash(this.password, salt); // Hash password
         next();
     } catch (err) {
         next(err);
     }
 });
 
+// Compare hashed password with entered password
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// Remove sensitive information when converting to JSON
 userSchema.set('toJSON', {
     transform: function (doc, ret) {
-        delete ret.password;
-        return ret;
+        delete ret.password; // Remove password field
+        return ret; // Return sanitized user object
     },
+});
+
+// Enhance query and model flexibility
+userSchema.virtual('isAdmin').get(function () {
+    return this.role === 'admin';
 });
 
 module.exports = mongoose.model('User', userSchema);

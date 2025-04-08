@@ -3,28 +3,35 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest"
   },
   "keywords": [
     "isp",
     "backend",
     "nodejs",
     "express",
-    "mongodb"
+    "mongodb",
+    "authentication",
+    "jwt"
   ],
-  "author": "David Nderitu",
-  "license": "ISC",
-  "description": "Backend for ISP with MongoDB Atlas integration",
+  "author": "brave-deritu",
+  "license": "MIT",
+  "description": "Scalable backend for ISP, with MongoDB Atlas, JWT authentication, and role-based access control.",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.13.1"
+    "mongoose": "^8.13.1",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.1.9"
   }
 }

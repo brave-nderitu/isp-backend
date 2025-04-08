@@ -1,8 +1,9 @@
-const Billing = require('../models/billingModel');
-const User = require('../models/userModel');
-const Plan = require('../models/planModel');
+const Billing = require('../models/billing-model');
+const User = require('../models/user-model');
+const Plan = require('../models/plan-model');
+const { handleServerError } = require('../utils/error-helpers');
 
-const generateInvoice = async (req, res) => {
+exports.generateInvoice = async (req, res) => {
     try {
         const { userId } = req.body;
 
@@ -31,34 +32,34 @@ const generateInvoice = async (req, res) => {
 
         res.status(201).json({ message: 'Invoice generated successfully', invoice });
     } catch (error) {
-        console.error('Error generating invoice:', error);
-        res.status(500).json({ message: 'Server error while generating invoice' });
+        handleServerError(res, 'Error generating invoice', error);
     }
 };
 
-const getMyInvoices = async (req, res) => {
+exports.getMyInvoices = async (req, res) => {
     try {
-        const invoices = await Billing.find({ userId: req.user.id }).populate('planId');
+        const invoices = await Billing.find({ userId: req.user.id })
+            .populate('planId', 'name cost');
+
         res.status(200).json({ invoices });
     } catch (error) {
-        console.error('Error fetching user invoices:', error);
-        res.status(500).json({ message: 'Server error while fetching invoices' });
+        handleServerError(res, 'Error fetching user invoices', error);
     }
 };
 
-const getAllInvoices = async (req, res) => {
+exports.getAllInvoices = async (req, res) => {
     try {
         const invoices = await Billing.find()
             .populate('userId', 'name email role')
             .populate('planId', 'name cost');
+
         res.status(200).json({ invoices });
     } catch (error) {
-        console.error('Error fetching all invoices:', error);
-        res.status(500).json({ message: 'Server error while fetching all invoices' });
+        handleServerError(res, 'Error fetching all invoices', error);
     }
 };
 
-const updateInvoiceStatus = async (req, res) => {
+exports.updateInvoiceStatus = async (req, res) => {
     try {
         const { status } = req.body;
         const allowedStatuses = ['paid', 'pending', 'overdue'];
@@ -67,17 +68,11 @@ const updateInvoiceStatus = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status value' });
         }
 
-        let invoice;
+        const filter = req.user.role === 'admin' 
+            ? { _id: req.params.id } 
+            : { _id: req.params.id, userId: req.user.id };
 
-        if (req.user.role === 'admin') {
-            invoice = await Billing.findByIdAndUpdate(req.params.id, { status }, { new: true });
-        } else {
-            invoice = await Billing.findOneAndUpdate(
-                { _id: req.params.id, userId: req.user.id },
-                { status },
-                { new: true }
-            );
-        }
+        const invoice = await Billing.findOneAndUpdate(filter, { status }, { new: true });
 
         if (!invoice) {
             return res.status(404).json({ message: 'Invoice not found or unauthorized' });
@@ -85,15 +80,24 @@ const updateInvoiceStatus = async (req, res) => {
 
         res.status(200).json({ message: 'Invoice status updated successfully', invoice });
     } catch (error) {
-        console.error('Error updating invoice status:', error);
-        res.status(500).json({ message: 'Server error while updating invoice' });
+        handleServerError(res, 'Error updating invoice status', error);
     }
 };
 
-module.exports = {
-    generateInvoice,
-    getMyInvoices,
-    getAllInvoices,
-    updateInvoiceStatus,
-    payInvoice: updateInvoiceStatus,
+exports.payInvoice = async (req, res) => {
+    try {
+        const invoice = await Billing.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user.id },
+            { status: 'paid' },
+            { new: true }
+        );
+
+        if (!invoice) {
+            return res.status(404).json({ message: 'Invoice not found or unauthorized' });
+        }
+
+        res.status(200).json({ message: 'Invoice paid successfully', invoice });
+    } catch (error) {
+        handleServerError(res, 'Error processing payment', error);
+    }
 };
